@@ -107,9 +107,11 @@ export function CameraPanel({ camera, nearbyCameras, onClose, onSelectNearby }: 
               onError={() => setStreamUrl(null)}
             />
           ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 p-4 text-center">
               <AlertCircle className="w-12 h-12 mb-2" />
-              <p>Stream unavailable</p>
+              <p>Camera image unavailable</p>
+              <p className="text-xs mt-2 opacity-60">Invalid URL in database</p>
+              <p className="text-xs mt-1 opacity-40 break-all">{camera.snapshot_url || camera.stream_url}</p>
             </div>
           )}
           

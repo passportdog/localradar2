@@ -28,9 +28,7 @@ export default function IntelMap({ initialState, onStateChange }: IntelMapProps)
   // Layer toggles
   const [layers, setLayers] = useState({
     cameras: true,
-    traffic: false,
     terrain: false,
-    buildings3d: true,
   });
   
   // Selected camera
@@ -133,16 +131,11 @@ export default function IntelMap({ initialState, onStateChange }: IntelMapProps)
   useEffect(() => {
     if (!map.current || !isLoaded) return;
     
-    // Terrain
-    map.current.setTerrain(layers.terrain ? { source: 'mapbox-dem', exaggeration: 1.5 } : null);
-    
-    // 3D Buildings visibility (only if layer exists)
-    if (map.current.getLayer('3d-buildings')) {
-      try {
-        map.current.setLayoutProperty('3d-buildings', 'visibility', layers.buildings3d ? 'visible' : 'none');
-      } catch {
-        // Layer might not exist
-      }
+    // Terrain toggle
+    try {
+      map.current.setTerrain(layers.terrain ? { source: 'mapbox-dem', exaggeration: 1.5 } : null);
+    } catch (err) {
+      console.log('Terrain toggle error:', err);
     }
   }, [layers, isLoaded]);
   
