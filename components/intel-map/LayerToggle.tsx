@@ -1,11 +1,12 @@
 'use client';
 
-import { Video, Mountain } from 'lucide-react';
+import { Video, Mountain, Car } from 'lucide-react';
 
 interface LayerToggleProps {
   layers: {
     cameras: boolean;
     terrain: boolean;
+    traffic: boolean;
   };
   onChange: (layers: LayerToggleProps['layers']) => void;
 }
@@ -22,6 +23,12 @@ export function LayerToggle({ layers, onChange }: LayerToggleProps) {
         onClick={() => toggle('cameras')}
         icon={<Video className="w-4 h-4" />}
         label="Cameras"
+      />
+      <ToggleButton
+        active={layers.traffic}
+        onClick={() => toggle('traffic')}
+        icon={<Car className="w-4 h-4" />}
+        label="Street Traffic"
       />
       <ToggleButton
         active={layers.terrain}

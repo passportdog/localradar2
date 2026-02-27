@@ -10,6 +10,7 @@ import { CameraPanel } from './CameraPanel';
 import { LayerToggle } from './LayerToggle';
 import { MapControls } from './MapControls';
 import { SearchBar } from './SearchBar';
+import { TrafficParticles } from './TrafficParticles';
 
 interface IntelMapProps {
   initialState?: Partial<MapState>;
@@ -29,6 +30,7 @@ export default function IntelMap({ initialState, onStateChange }: IntelMapProps)
   const [layers, setLayers] = useState({
     cameras: true,
     terrain: false,
+    traffic: false,
   });
   
   // Selected camera
@@ -208,6 +210,11 @@ export default function IntelMap({ initialState, onStateChange }: IntelMapProps)
       <div className="absolute bottom-8 right-4 z-10">
         <MapControls onLocate={handleLocate} />
       </div>
+      
+      {/* Traffic Particles */}
+      {isLoaded && map.current && (
+        <TrafficParticles map={map.current} enabled={layers.traffic} />
+      )}
       
       {/* Camera Panel */}
       <CameraPanel
