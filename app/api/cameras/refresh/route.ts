@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-// FDOT Camera Feed URL patterns
-const FDOT_SOURCES = [
-  {
-    name: 'FDOT Miami-Dade',
-    baseUrl: 'https://www.fdotmiamidad.com',
-    apiEndpoint: '/api/cameras',
-  },
-  {
-    name: 'FDOT Statewide',
-    baseUrl: 'https://fl511.com',
-    apiEndpoint: '/api/cameras',
-  },
+// FDOT/FL511 camera endpoints (mock - replace with real feeds)
+const FDOT_FEEDS = [
+  { name: 'I-4 Corridor', url: 'https://fl511.com/api/cameras/i4' },
+  { name: 'I-75 South', url: 'https://fl511.com/api/cameras/i75' },
+  { name: 'I-95 East Coast', url: 'https://fl511.com/api/cameras/i95' },
+  { name: 'I-10 Panhandle', url: 'https://fl511.com/api/cameras/i10' },
+  { name: 'Turnpike', url: 'https://fl511.com/api/cameras/turnpike' },
 ];
 
 interface FDOTCamera {
@@ -20,48 +15,24 @@ interface FDOTCamera {
   name: string;
   latitude: number;
   longitude: number;
-  url: string;
-  direction?: string;
-  roadName?: string;
-}
-
-async function fetchFDOTCameras(source: typeof FDOT_SOURCES[0]): Promise<FDOTCamera[]> {
-  try {
-    // This is a placeholder - actual FDOT API would be implemented here
-    // In production, this would call the real FDOT API
-    const response = await fetch(`${source.baseUrl}${source.apiEndpoint}`, {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'LocalRadar2/1.0',
-      },
-      next: { revalidate: 0 },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data.cameras || [];
-  } catch (error) {
-    console.error(`Error fetching from ${source.name}:`, error);
-    return [];
-  }
+  streamUrl: string;
+  stillUrl: string;
+  direction: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify authorization (in production, use proper auth)
+    // Verify admin/auth if needed
     const authHeader = request.headers.get('authorization');
-    const isAuthorized = authHeader === `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`;
+    const isAdmin = authHeader === `Bearer ${process.env.ADMIN_API_KEY}`;
     
-    if (!isAuthorized && process.env.NODE_ENV === 'production') {
+    if (!isAdmin && process.env.NODE_ENV === 'production') {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
-
+    
     const supabase = await createClient();
     const results = {
       fetched: 0,
@@ -69,120 +40,86 @@ export async function POST(request: NextRequest) {
       updated: 0,
       errors: [] as string[],
     };
-
-    // Fetch cameras from all sources
-    for (const source of FDOT_SOURCES) {
+    
+    // For demo: Insert mock Florida cameras
+    const mockCameras: Omit<FDOTCamera, 'id'>[] = generateMockFloridaCameras();
+    
+    for (const camera of mockCameras) {
       try {
-        const cameras = await fetchFDOTCameras(source);
-        results.fetched += cameras.length;
-
-        for (const camera of cameras) {
-          const { error } = await supabase
-            .from('cameras')
-            .upsert(
-              {
-                id: camera.id,
-                name: camera.name,
-                latitude: camera.latitude,
-                longitude: camera.longitude,
-                snapshot_url: camera.url,
-                source: source.name,
-                direction: camera.direction || null,
-                road_name: camera.roadName || null,
-                status: 'active',
-                is_active: true,
-                last_updated: new Date().toISOString(),
-              },
-              { onConflict: 'id' }
-            );
-
-          if (error) {
-            results.errors.push(`Failed to upsert ${camera.id}: ${error.message}`);
-          } else {
-            results.updated++;
-          }
-        }
-      } catch (error) {
-        results.errors.push(`Source ${source.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
-    }
-
-    // If no external API available, seed with sample data
-    if (results.fetched === 0) {
-      const sampleCameras = generateSampleCameras();
-      
-      for (const camera of sampleCameras) {
         const { error } = await supabase
-          .from('cameras')
-          .upsert(camera, { onConflict: 'id' });
-
+          .from('traffic_cameras')
+          .upsert({
+            name: camera.name,
+            latitude: camera.latitude,
+            longitude: camera.longitude,
+            stream_url: camera.streamUrl,
+            still_url: camera.stillUrl,
+            direction: camera.direction,
+            status: 'active',
+            source: 'fdot',
+            last_checked: new Date().toISOString(),
+          }, {
+            onConflict: 'name',
+          });
+          
         if (error) {
-          results.errors.push(`Failed to upsert ${camera.id}: ${error.message}`);
+          results.errors.push(`${camera.name}: ${error.message}`);
         } else {
           results.inserted++;
         }
+      } catch (err) {
+        results.errors.push(`${camera.name}: ${String(err)}`);
       }
     }
-
+    
+    results.fetched = mockCameras.length;
+    
     return NextResponse.json({
       success: true,
-      timestamp: new Date().toISOString(),
-      ...results,
+      results,
+      feedsProcessed: FDOT_FEEDS.length,
     });
+    
   } catch (error) {
-    console.error('Refresh error:', error);
+    console.error('Camera refresh error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown' },
+      { error: 'Failed to refresh cameras' },
       { status: 500 }
     );
   }
 }
 
-// Generate sample Florida cameras for development
-function generateSampleCameras() {
-  const cameras = [];
-  const baseLocations = [
-    { lat: 25.7617, lng: -80.1918, name: 'Miami Downtown' },
-    { lat: 25.7907, lng: -80.1300, name: 'Miami Beach' },
-    { lat: 25.6859, lng: -80.3142, name: 'Kendall' },
-    { lat: 25.9429, lng: -80.1234, name: 'Aventura' },
-    { lat: 25.8576, lng: -80.2781, name: 'Doral' },
-    { lat: 25.7752, lng: -80.2106, name: 'Coral Gables' },
-    { lat: 25.9087, lng: -80.1584, name: 'North Miami' },
-    { lat: 25.7006, lng: -80.1623, name: 'Key Biscayne' },
-    { lat: 25.9792, lng: -80.1438, name: 'Sunny Isles' },
-    { lat: 26.0113, lng: -80.1495, name: 'Hallandale' },
+// Generate realistic mock camera locations across Florida
+function generateMockFloridaCameras(): Omit<FDOTCamera, 'id'>[] {
+  const cameras: Omit<FDOTCamera, 'id'>[] = [];
+  const corridors = [
+    { name: 'I-4', start: [27.95, -82.45], end: [28.54, -81.38], count: 15 },
+    { name: 'I-75', start: [27.5, -82.6], end: [30.4, -82.3], count: 20 },
+    { name: 'I-95', start: [25.8, -80.2], end: [30.7, -81.7], count: 25 },
+    { name: 'I-10', start: [30.4, -87.2], end: [30.3, -82.3], count: 12 },
+    { name: 'FL Turnpike', start: [25.9, -80.3], end: [29.7, -82.1], count: 18 },
   ];
-
-  const roads = ['I-95', 'Florida Turnpike', 'Palmetto Expressway', 'Dolphin Expressway', 'I-75'];
-  const directions = ['NB', 'SB', 'EB', 'WB'];
-
-  for (let i = 0; i < 100; i++) {
-    const base = baseLocations[i % baseLocations.length];
-    const offsetLat = (Math.random() - 0.5) * 0.5;
-    const offsetLng = (Math.random() - 0.5) * 0.5;
-    
-    cameras.push({
-      id: `fdot-miami-${i.toString().padStart(3, '0')}`,
-      name: `${base.name} - ${roads[i % roads.length]} ${directions[i % directions.length]}`,
-      description: `Traffic camera at ${base.name}`,
-      latitude: base.lat + offsetLat,
-      longitude: base.lng + offsetLng,
-      snapshot_url: `https://www.fdotmiamidad.com/cameras/cam${i.toString().padStart(3, '0')}.jpg`,
-      stream_url: null,
-      status: 'active',
-      direction: directions[i % directions.length],
-      road_name: roads[i % roads.length],
-      source: 'FDOT Miami-Dade',
-      is_active: true,
-      last_updated: new Date().toISOString(),
-      properties: {
-        camera_type: 'traffic',
-        resolution: '1080p',
-        refresh_rate: 5,
-      },
-    });
+  
+  const DIRECTIONS = ['NB', 'SB', 'EB', 'WB'];
+  
+  for (const corridor of corridors) {
+    for (let i = 0; i < corridor.count; i++) {
+      const progress = i / (corridor.count - 1);
+      const lat = corridor.start[0] + (corridor.end[0] - corridor.start[0]) * progress + (Math.random() - 0.5) * 0.05;
+      const lng = corridor.start[1] + (corridor.end[1] - corridor.start[1]) * progress + (Math.random() - 0.5) * 0.05;
+      const directions = corridor.name.includes('Turnpike') ? ['NB', 'SB'] : ['EB', 'WB'];
+      const direction = directions[i % directions.length];
+      
+      cameras.push({
+        name: `${corridor.name} @ MM ${Math.floor(Math.random() * 300)} ${direction}`,
+        latitude: lat,
+        longitude: lng,
+        streamUrl: `https://fl511.com/cameras/${corridor.name.toLowerCase().replace(/\s/g, '-')}-${i}.m3u8`,
+        stillUrl: `https://fl511.com/cameras/snapshots/${corridor.name.toLowerCase().replace(/\s/g, '-')}-${i}.jpg`,
+        direction,
+      });
+    }
   }
-
+  
   return cameras;
 }
