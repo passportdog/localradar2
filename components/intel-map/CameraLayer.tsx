@@ -18,6 +18,9 @@ export function CameraLayer({ map, onCameraSelect }: CameraLayerProps) {
   const fetchCameras = useCallback(async () => {
     const center = map.getCenter();
     const bounds = map.getBounds();
+    
+    if (!bounds) return;
+    
     const radius = Math.ceil(bounds.getNorthEast().distanceTo(bounds.getSouthWest()) / 2000);
     
     try {
