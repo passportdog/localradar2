@@ -6,11 +6,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     
     // Parse query params
-    const lat = parseFloat(searchParams.get('lat') || '27.9506');
-    const lng = parseFloat(searchParams.get('lng') || '-82.4572');
-    const radius = parseFloat(searchParams.get('radius') || '50');
+    const lat = searchParams.get('lat') || '27.9506';
+    const lng = searchParams.get('lng') || '-82.4572';
+    const radius = searchParams.get('radius') || '50';
     const zip = searchParams.get('zip');
-    const limit = parseInt(searchParams.get('limit') || '100');
     
     const supabase = await createClient();
     
@@ -20,17 +19,16 @@ export async function GET(request: NextRequest) {
       // Query by ZIP code
       const { data, error } = await supabase.rpc('get_cameras_by_zip', {
         zip_code: zip,
-        max_results: limit,
+        radius_miles: 10,
       });
       if (error) throw error;
       query = { data, error };
     } else {
       // Query by radius using PostGIS
       const { data, error } = await supabase.rpc('get_cameras_within_radius', {
-        center_lat: lat,
-        center_lng: lng,
-        radius_km: radius,
-        max_results: limit,
+        user_lat: parseFloat(lat),
+        user_lng: parseFloat(lng),
+        radius_miles: parseFloat(radius),
       });
       if (error) throw error;
       query = { data, error };
@@ -47,9 +45,9 @@ export async function GET(request: NextRequest) {
       cameras: query.data || [],
       count: query.data?.length || 0,
       meta: {
-        lat,
-        lng,
-        radius,
+        lat: parseFloat(lat),
+        lng: parseFloat(lng),
+        radius: parseFloat(radius),
         zip,
       },
     });
