@@ -6,7 +6,6 @@
   "devCommand": "next dev",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "regions": ["mia1"],
   "env": {
     "NEXT_PUBLIC_MAPBOX_TOKEN": "@mapbox_token",
     "NEXT_PUBLIC_SUPABASE_URL": "@supabase_url",
