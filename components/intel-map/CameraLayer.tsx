@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import { Camera } from '@/types/intel';
-import { CAMERA_STYLES } from '@/lib/intel-map/styles';
+import { clusterStyle, clusterCountStyle, clusterCountPaint, markerStyle } from '@/lib/intel-map/styles';
 
 interface CameraLayerProps {
   map: mapboxgl.Map;
@@ -84,7 +84,7 @@ export function CameraLayer({ map, onCameraSelect }: CameraLayerProps) {
       type: 'circle',
       source: 'cameras',
       filter: ['has', 'point_count'],
-      paint: CAMERA_STYLES.cluster,
+      paint: clusterStyle,
     });
     
     // Add cluster count
@@ -93,7 +93,8 @@ export function CameraLayer({ map, onCameraSelect }: CameraLayerProps) {
       type: 'symbol',
       source: 'cameras',
       filter: ['has', 'point_count'],
-      layout: CAMERA_STYLES.clusterCount,
+      layout: clusterCountStyle,
+      paint: clusterCountPaint,
     });
     
     // Add individual camera markers
@@ -102,7 +103,7 @@ export function CameraLayer({ map, onCameraSelect }: CameraLayerProps) {
       type: 'circle',
       source: 'cameras',
       filter: ['!', ['has', 'point_count']],
-      paint: CAMERA_STYLES.marker,
+      paint: markerStyle,
     });
     
     // Click handler
