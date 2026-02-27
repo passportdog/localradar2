@@ -68,21 +68,27 @@ export default function IntelMap({ initialState, onStateChange }: IntelMapProps)
         maxzoom: 14,
       });
       
-      // Add 3D buildings
-      newMap.addLayer({
-        id: '3d-buildings',
-        source: 'composite',
-        'source-layer': 'building',
-        filter: ['==', 'extrude', 'true'],
-        type: 'fill-extrusion',
-        minzoom: 14,
-        paint: {
-          'fill-extrusion-color': '#1a1a2e',
-          'fill-extrusion-height': ['get', 'height'],
-          'fill-extrusion-base': ['get', 'min_height'],
-          'fill-extrusion-opacity': 0.8,
-        },
-      });
+      // Add 3D buildings (only if composite source exists - not available on satellite)
+      try {
+        if (newMap.getSource('composite')) {
+          newMap.addLayer({
+            id: '3d-buildings',
+            source: 'composite',
+            'source-layer': 'building',
+            filter: ['==', 'extrude', 'true'],
+            type: 'fill-extrusion',
+            minzoom: 14,
+            paint: {
+              'fill-extrusion-color': '#1a1a2e',
+              'fill-extrusion-height': ['get', 'height'],
+              'fill-extrusion-base': ['get', 'min_height'],
+              'fill-extrusion-opacity': 0.8,
+            },
+          });
+        }
+      } catch {
+        // 3D buildings not available on this style
+      }
       
       // Set atmosphere
       newMap.setFog({
@@ -130,9 +136,13 @@ export default function IntelMap({ initialState, onStateChange }: IntelMapProps)
     // Terrain
     map.current.setTerrain(layers.terrain ? { source: 'mapbox-dem', exaggeration: 1.5 } : null);
     
-    // 3D Buildings visibility
+    // 3D Buildings visibility (only if layer exists)
     if (map.current.getLayer('3d-buildings')) {
-      map.current.setLayoutProperty('3d-buildings', 'visibility', layers.buildings3d ? 'visible' : 'none');
+      try {
+        map.current.setLayoutProperty('3d-buildings', 'visibility', layers.buildings3d ? 'visible' : 'none');
+      } catch {
+        // Layer might not exist
+      }
     }
   }, [layers, isLoaded]);
   
