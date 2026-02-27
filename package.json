@@ -12,7 +12,8 @@
     "db:generate": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > types/supabase.ts",
     "db:migrate": "supabase migration up",
     "db:seed": "tsx scripts/seed-fdot-cameras.ts",
-    "db:reset": "supabase db reset"
+    "db:reset": "supabase db reset",
+    "cameras:sync-azure": "tsx scripts/sync-azure-cameras.ts"
   },
   "dependencies": {
     "next": "15.5.12",
