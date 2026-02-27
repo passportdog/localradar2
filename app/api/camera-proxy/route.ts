@@ -7,6 +7,7 @@ const ALLOWED_DOMAINS = [
   'fl511.com',
   'floridasturnpike.com',
   'miami.gov',
+  'picsum.photos',
 ];
 
 // Validate URL is from allowed domains
