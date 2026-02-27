@@ -1,0 +1,53 @@
+{
+  "name": "localradar2",
+  "version": "1.0.0",
+  "description": "Deluxe Map Intelligence Platform - Real-time Florida traffic cameras with 3D visualization",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit",
+    "db:generate": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > types/supabase.ts",
+    "db:migrate": "supabase migration up",
+    "db:seed": "tsx scripts/seed-fdot-cameras.ts",
+    "db:reset": "supabase db reset"
+  },
+  "dependencies": {
+    "next": "15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.47.0",
+    "mapbox-gl": "^3.9.0",
+    "react-map-gl": "^7.1.8",
+    "zustand": "^5.0.2",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.6.0",
+    "lucide-react": "^0.469.0",
+    "@turf/turf": "^7.2.0",
+    "supercluster": "^8.0.1",
+    "date-fns": "^4.1.0",
+    "ky": "^1.7.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@types/mapbox-gl": "^3.4.1",
+    "@types/supercluster": "^7.1.3",
+    "typescript": "^5.7.2",
+    "eslint": "^9.17.0",
+    "eslint-config-next": "15.1.0",
+    "tailwindcss": "^3.4.17",
+    "postcss": "^8.4.49",
+    "autoprefixer": "^10.4.20",
+    "@tailwindcss/forms": "^0.5.9",
+    "tsx": "^4.19.2",
+    "dotenv": "^16.4.7"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

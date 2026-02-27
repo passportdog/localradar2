@@ -1,0 +1,153 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Mapbox GL CSS Override */
+@import 'mapbox-gl/dist/mapbox-gl.css';
+
+@layer base {
+  :root {
+    --radius: 0.5rem;
+  }
+
+  * {
+    @apply border-map-border;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply font-sans text-slate-200;
+  }
+}
+
+@layer components {
+  /* Map Container Styles */
+  .map-container {
+    @apply w-full h-full relative;
+  }
+
+  .map-container canvas {
+    @apply outline-none;
+  }
+
+  /* Custom Map Markers */
+  .camera-marker {
+    @apply cursor-pointer transition-transform duration-200 hover:scale-110;
+  }
+
+  .camera-marker-inner {
+    @apply w-4 h-4 rounded-full border-2 border-white shadow-lg;
+  }
+
+  .camera-marker-active .camera-marker-inner {
+    @apply bg-camera-active;
+  }
+
+  .camera-marker-loading .camera-marker-inner {
+    @apply bg-camera-loading animate-pulse;
+  }
+
+  .camera-marker-error .camera-marker-inner {
+    @apply bg-camera-error;
+  }
+
+  .camera-marker-offline .camera-marker-inner {
+    @apply bg-camera-offline;
+  }
+
+  /* Cluster Marker */
+  .cluster-marker {
+    @apply rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg border-2 border-white/50;
+    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  }
+
+  /* Map Controls */
+  .map-control-btn {
+    @apply w-10 h-10 flex items-center justify-center bg-map-panel hover:bg-slate-700 text-white rounded-lg shadow-md transition-colors duration-200;
+  }
+
+  .map-control-btn:active {
+    @apply scale-95;
+  }
+
+  /* Glass Panel */
+  .glass-panel {
+    @apply bg-map-panel/90 backdrop-blur-md border border-map-border rounded-xl shadow-xl;
+  }
+
+  /* Search Bar */
+  .search-input {
+    @apply w-full bg-map-panel/90 backdrop-blur-md border border-map-border rounded-xl px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-intel-500 focus:border-transparent shadow-lg;
+  }
+
+  /* Layer Toggle */
+  .layer-toggle {
+    @apply flex items-center gap-2 px-3 py-2 rounded-lg bg-map-panel/80 hover:bg-map-panel transition-colors cursor-pointer text-sm;
+  }
+
+  .layer-toggle.active {
+    @apply bg-intel-600/20 text-intel-300;
+  }
+
+  /* Camera Panel */
+  .camera-panel {
+    @apply glass-panel p-4 transition-all duration-300;
+  }
+
+  /* Scrollbar Styling */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-map-bg rounded-full;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-slate-600 rounded-full;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-500;
+  }
+}
+
+@layer utilities {
+  /* Mapbox Popup Customization */
+  .mapboxgl-popup-content {
+    @apply bg-map-panel text-white p-3 rounded-lg shadow-xl border border-map-border;
+  }
+
+  .mapboxgl-popup-tip {
+    @apply border-t-map-panel;
+  }
+
+  .mapboxgl-popup-close-button {
+    @apply text-slate-400 hover:text-white text-xl leading-none p-1;
+  }
+
+  /* Hide Mapbox Logo and Attribution when needed */
+  .mapboxgl-ctrl-logo {
+    @apply opacity-50 hover:opacity-100 transition-opacity;
+  }
+
+  .mapboxgl-ctrl-attrib {
+    @apply text-xs;
+  }
+
+  /* Loading States */
+  .skeleton {
+    @apply animate-pulse bg-slate-700 rounded;
+  }
+
+  /* Text Ellipsis */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
