@@ -152,7 +152,7 @@ export default function IntelMap({ initialState, onStateChange }: IntelMapProps)
     
     // Fetch nearby cameras
     try {
-      const res = await fetch(`/api/cameras?lat=${camera.latitude}&lng=${camera.longitude}&radius=5&limit=6`);
+      const res = await fetch(`/api/cameras?lat=${camera.lat}&lng=${camera.lng}&radius=5&limit=6`);
       const data = await res.json();
       setNearbyCameras(data.cameras?.filter((c: Camera) => c.id !== camera.id) || []);
     } catch {

@@ -1,17 +1,18 @@
-export type CameraStatus = 'active' | 'degraded' | 'dead' | 'unknown';
+export type CameraStatus = 'active' | 'inactive' | 'degraded';
 
 export interface Camera {
   id: string;
+  camera_id: string;
   name: string;
-  latitude: number;
-  longitude: number;
+  intersection: string | null;
+  lat: number;
+  lng: number;
+  stream_url: string | null;
+  snapshot_url: string | null;
+  state: string;
   status: CameraStatus;
-  direction?: string;
-  stream_url?: string;
-  still_url?: string;
-  source?: string;
-  last_checked?: string;
-  created_at?: string;
+  last_checked: string | null;
+  created_at: string;
 }
 
 export interface MapState {

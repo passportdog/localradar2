@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       if (error) throw error;
       query = { data, error };
     } else {
-      // Query by radius
+      // Query by radius using PostGIS
       const { data, error } = await supabase.rpc('get_cameras_within_radius', {
         center_lat: lat,
         center_lng: lng,

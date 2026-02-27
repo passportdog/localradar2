@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { X, MapPin, Navigation, Radio, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, MapPin, Radio, AlertCircle } from 'lucide-react';
 import { Camera } from '@/types/intel';
 
 interface CameraPanelProps {
@@ -22,7 +22,7 @@ export function CameraPanel({ camera, nearbyCameras, onClose, onSelectNearby }: 
       setIsLoading(true);
       
       // Build proxy URL for the still image (3-5s refresh)
-      const proxyUrl = `/api/camera-proxy?url=${encodeURIComponent(camera.still_url || camera.stream_url || '')}`;
+      const proxyUrl = `/api/camera-proxy?url=${encodeURIComponent(camera.snapshot_url || camera.stream_url || '')}`;
       setStreamUrl(proxyUrl);
       
       // Simulate loading
@@ -39,8 +39,8 @@ export function CameraPanel({ camera, nearbyCameras, onClose, onSelectNearby }: 
     if (!streamUrl || !isOpen) return;
     
     const interval = setInterval(() => {
-      if (camera?.still_url) {
-        setStreamUrl(`/api/camera-proxy?url=${encodeURIComponent(camera.still_url)}&t=${Date.now()}`);
+      if (camera?.snapshot_url) {
+        setStreamUrl(`/api/camera-proxy?url=${encodeURIComponent(camera.snapshot_url)}&t=${Date.now()}`);
       }
     }, 3500);
     
@@ -51,7 +51,7 @@ export function CameraPanel({ camera, nearbyCameras, onClose, onSelectNearby }: 
     switch (status) {
       case 'active': return 'bg-emerald-500';
       case 'degraded': return 'bg-yellow-500';
-      case 'dead': return 'bg-red-500';
+      case 'inactive': return 'bg-red-500';
       default: return 'bg-gray-500';
     }
   };
@@ -60,7 +60,7 @@ export function CameraPanel({ camera, nearbyCameras, onClose, onSelectNearby }: 
     switch (status) {
       case 'active': return 'ACTIVE';
       case 'degraded': return 'DEGRADED';
-      case 'dead': return 'OFFLINE';
+      case 'inactive': return 'OFFLINE';
       default: return 'UNKNOWN';
     }
   };
@@ -129,13 +129,18 @@ export function CameraPanel({ camera, nearbyCameras, onClose, onSelectNearby }: 
       {/* Camera Info */}
       <div className="px-4 pb-4">
         <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="flex items-center gap-2 text-gray-400">
-            <Navigation className="w-4 h-4" />
-            <span>Direction: {camera.direction || 'N/A'}</span>
-          </div>
+          {camera.intersection && (
+            <div className="flex items-center gap-2 text-gray-400 col-span-2">
+              <MapPin className="w-4 h-4" />
+              <span>{camera.intersection}</span>
+            </div>
+          )}
           <div className="flex items-center gap-2 text-gray-400">
             <MapPin className="w-4 h-4" />
-            <span>{camera.latitude.toFixed(4)}, {camera.longitude.toFixed(4)}</span>
+            <span>{camera.lat.toFixed(4)}, {camera.lng.toFixed(4)}</span>
+          </div>
+          <div className="flex items-center gap-2 text-gray-400">
+            <span className="text-xs uppercase">{camera.state}</span>
           </div>
         </div>
       </div>
@@ -155,7 +160,7 @@ export function CameraPanel({ camera, nearbyCameras, onClose, onSelectNearby }: 
                   <div className={`w-2 h-2 rounded-full ${getStatusColor(nearby.status)}`} />
                   <span className="text-xs font-medium truncate">{nearby.name}</span>
                 </div>
-                <span className="text-xs text-gray-500">{nearby.direction}</span>
+                <span className="text-xs text-gray-500">{nearby.intersection || ''}</span>
               </button>
             ))}
           </div>

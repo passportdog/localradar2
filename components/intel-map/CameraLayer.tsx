@@ -47,15 +47,14 @@ export function CameraLayer({ map, onCameraSelect }: CameraLayerProps) {
           type: 'Feature',
           geometry: {
             type: 'Point',
-            coordinates: [cam.longitude, cam.latitude],
+            coordinates: [cam.lng, cam.lat],
           },
           properties: {
             id: cam.id,
             name: cam.name,
             status: cam.status,
-            direction: cam.direction,
             streamUrl: cam.stream_url,
-            stillUrl: cam.still_url,
+            snapshotUrl: cam.snapshot_url,
           },
         })),
       });
@@ -129,13 +128,17 @@ export function CameraLayer({ map, onCameraSelect }: CameraLayerProps) {
       // Individual camera clicked
       const camera: Camera = {
         id: props.id,
+        camera_id: props.id,
         name: props.name,
-        latitude: (feature.geometry as GeoJSON.Point).coordinates[1],
-        longitude: (feature.geometry as GeoJSON.Point).coordinates[0],
+        lat: (feature.geometry as GeoJSON.Point).coordinates[1],
+        lng: (feature.geometry as GeoJSON.Point).coordinates[0],
         status: props.status,
-        direction: props.direction,
+        intersection: null,
         stream_url: props.streamUrl,
-        still_url: props.stillUrl,
+        snapshot_url: props.snapshotUrl,
+        state: '',
+        last_checked: null,
+        created_at: '',
       };
       
       onCameraSelect(camera);
