@@ -27,5 +27,11 @@
       "source": "/ingest/:path*",
       "destination": "https://app.posthog.com/:path*"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cameras/sync",
+      "schedule": "0 3 * * 0"
+    }
   ]
 }

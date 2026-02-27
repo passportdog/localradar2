@@ -13,7 +13,6 @@ const supabase = createClient(
 
 interface AzureCamera {
   id: string;
-  type: string;
   geometry: {
     type: 'Point';
     coordinates: [number, number];
@@ -22,33 +21,30 @@ interface AzureCamera {
     cameraName?: string;
     imageUrl?: string;
     videoUrl?: string;
-    direction?: string;
     roadName?: string;
+    locationLabel?: string;
   };
 }
 
-// Florida regions to scan for cameras
-const FLORIDA_REGIONS = [
-  { lat: 25.7617, lng: -80.1918, name: 'Miami' },
-  { lat: 26.1224, lng: -80.1373, name: 'Fort Lauderdale' },
-  { lat: 27.9506, lng: -82.4572, name: 'Tampa' },
-  { lat: 28.5383, lng: -81.3792, name: 'Orlando' },
-  { lat: 30.3322, lng: -81.6557, name: 'Jacksonville' },
-  { lat: 27.7676, lng: -82.6403, name: 'St Petersburg' },
-  { lat: 26.7153, lng: -80.0534, name: 'West Palm Beach' },
-  { lat: 28.0836, lng: -80.6081, name: 'Melbourne' },
-  { lat: 27.2730, lng: -80.3582, name: 'Port St Lucie' },
-  { lat: 26.5629, lng: -81.9495, name: 'Cape Coral' },
-  { lat: 27.4989, lng: -82.5748, name: 'Bradenton' },
-  { lat: 28.9020, lng: -81.2176, name: 'Deltona' },
+// Florida bounding box scan points
+const FLORIDA_SCAN_POINTS = [
+  { lat: 24.8, lng: -87.4 },  // SW
+  { lat: 24.8, lng: -84.0 },  // South central
+  { lat: 24.8, lng: -80.2 },  // SE
+  { lat: 27.0, lng: -87.4 },  // West central
+  { lat: 27.0, lng: -84.0 },  // Central
+  { lat: 27.0, lng: -80.2 },  // East central
+  { lat: 30.8, lng: -87.4 },  // NW
+  { lat: 30.8, lng: -84.0 },  // North central
+  { lat: 30.8, lng: -80.2 },  // NE
 ];
 
-async function fetchAzureCameras(lat: number, lng: number, radius: number = 50): Promise<AzureCamera[]> {
+async function fetchAzureCameras(lat: number, lng: number): Promise<AzureCamera[]> {
   const url = new URL(AZURE_BASE_URL);
   url.searchParams.set('subscription-key', AZURE_MAPS_KEY!);
   url.searchParams.set('api-version', '1.0');
   url.searchParams.set('query', `${lat},${lng}`);
-  url.searchParams.set('radius', radius.toString());
+  url.searchParams.set('radius', '100'); // 100km radius per scan
 
   const response = await fetch(url.toString(), {
     headers: { 'Accept': 'application/json' },
@@ -63,56 +59,47 @@ async function fetchAzureCameras(lat: number, lng: number, radius: number = 50):
   return data.cameras || [];
 }
 
-async function syncCameras() {
-  console.log('🔄 Starting Azure Maps camera sync...\n');
+async function syncAzureCameras() {
+  console.log('🔄 Starting Azure Maps camera sync for Florida...\n');
 
   if (!AZURE_MAPS_KEY) {
     console.error('❌ AZURE_MAPS_KEY not set in .env.local');
     process.exit(1);
   }
 
-  const results = {
-    fetched: 0,
-    inserted: 0,
-    updated: 0,
-    errors: [] as string[],
-    regions: FLORIDA_REGIONS.length,
-  };
-
-  // Collect all unique cameras from all regions
+  // Collect all unique cameras from all scan points
   const cameraMap = new Map<string, AzureCamera>();
 
-  for (const region of FLORIDA_REGIONS) {
+  for (const point of FLORIDA_SCAN_POINTS) {
     try {
-      console.log(`📍 Scanning ${region.name}...`);
-      const cameras = await fetchAzureCameras(region.lat, region.lng, 50);
+      console.log(`📍 Scanning ${point.lat}, ${point.lng}...`);
+      const cameras = await fetchAzureCameras(point.lat, point.lng);
       
       for (const cam of cameras) {
         cameraMap.set(cam.id, cam);
       }
       
-      console.log(`  ✓ Found ${cameras.length} cameras`);
-      results.fetched += cameras.length;
+      console.log(`  ✓ Found ${cameras.length} cameras (total unique: ${cameraMap.size})`);
       
       // Small delay to be nice to the API
-      await new Promise(r => setTimeout(r, 200));
+      await new Promise(r => setTimeout(r, 300));
     } catch (err) {
-      const errorMsg = `Region ${region.name}: ${err instanceof Error ? err.message : 'Unknown error'}`;
-      console.error(`  ✗ ${errorMsg}`);
-      results.errors.push(errorMsg);
+      console.error(`  ✗ Error at ${point.lat}, ${point.lng}:`, err);
     }
   }
 
-  console.log(`\n📊 Total unique cameras found: ${cameraMap.size}`);
+  console.log(`\n📊 Total unique cameras from Azure: ${cameraMap.size}`);
   console.log('⬆️  Upserting to database...\n');
+
+  let upserted = 0;
 
   // Upsert all unique cameras to database
   for (const [id, cam] of cameraMap) {
     try {
       const cameraData = {
-        camera_id: cam.id,
+        camera_id: `az-${cam.id}`,
         name: cam.properties.cameraName || `Camera ${cam.id}`,
-        intersection: cam.properties.roadName || null,
+        intersection: cam.properties.roadName || cam.properties.locationLabel || null,
         lat: cam.geometry.coordinates[1],
         lng: cam.geometry.coordinates[0],
         stream_url: cam.properties.videoUrl || null,
@@ -120,6 +107,7 @@ async function syncCameras() {
         state: 'FL',
         status: 'active',
         last_checked: new Date().toISOString(),
+        created_at: new Date().toISOString(),
       };
 
       const { error } = await supabase
@@ -127,34 +115,50 @@ async function syncCameras() {
         .upsert(cameraData, { onConflict: 'camera_id' });
 
       if (error) {
-        results.errors.push(`Camera ${id}: ${error.message}`);
+        console.error(`  ✗ Camera az-${id}: ${error.message}`);
       } else {
-        results.updated++;
+        upserted++;
       }
     } catch (err) {
-      results.errors.push(`Camera ${id}: ${err instanceof Error ? err.message : 'Unknown'}`);
+      console.error(`  ✗ Camera az-${id}:`, err);
     }
   }
 
-  // Print summary
-  console.log('✅ Sync complete!\n');
-  console.log('📈 Summary:');
-  console.log(`  Regions scanned: ${results.regions}`);
-  console.log(`  Total cameras fetched: ${results.fetched}`);
-  console.log(`  Unique cameras: ${cameraMap.size}`);
-  console.log(`  Upserted to DB: ${results.updated}`);
-  console.log(`  Errors: ${results.errors.length}`);
+  console.log(`✅ Upserted ${upserted} real cameras`);
 
-  if (results.errors.length > 0) {
-    console.log('\n⚠️  Errors (first 5):');
-    results.errors.slice(0, 5).forEach(e => console.log(`  - ${e}`));
+  // Delete placeholder cameras
+  console.log('\n🗑️  Deleting placeholder cameras...');
+  const { data: deleted, error: deleteError } = await supabase
+    .from('traffic_cameras')
+    .delete()
+    .like('snapshot_url', '%picsum.photos%')
+    .select('camera_id');
+
+  if (deleteError) {
+    console.error('  ✗ Error deleting placeholders:', deleteError.message);
+  } else {
+    console.log(`  ✅ Deleted ${deleted?.length || 0} placeholder cameras`);
   }
 
-  console.log('\n🦀 Done! Your cameras are now synced from Azure Maps.');
+  // Final count
+  const { count, error: countError } = await supabase
+    .from('traffic_cameras')
+    .select('*', { count: 'exact', head: true });
+
+  console.log('\n📈 Final Results:');
+  console.log(`  Real cameras upserted: ${upserted}`);
+  console.log(`  Placeholders deleted: ${deleted?.length || 0}`);
+  console.log(`  Total cameras in DB: ${count || 'unknown'}`);
+
+  if (countError) {
+    console.error('  Could not get final count:', countError.message);
+  }
+
+  console.log('\n🦀 Done! Your map now has real Florida traffic cameras from Azure Maps.');
 }
 
 // Run sync
-syncCameras().catch(err => {
+syncAzureCameras().catch(err => {
   console.error('Fatal error:', err);
   process.exit(1);
 });

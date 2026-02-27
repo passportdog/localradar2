@@ -13,7 +13,7 @@
     "db:migrate": "supabase migration up",
     "db:seed": "tsx scripts/seed-fdot-cameras.ts",
     "db:reset": "supabase db reset",
-    "cameras:sync-azure": "tsx scripts/sync-azure-cameras.ts"
+    "sync:cameras": "tsx scripts/sync-azure-cameras.ts"
   },
   "dependencies": {
     "next": "15.5.12",
