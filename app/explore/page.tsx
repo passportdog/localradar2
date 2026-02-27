@@ -5,13 +5,10 @@ import dynamic from 'next/dynamic';
 import { Map, Loader2 } from 'lucide-react';
 
 // Dynamic import for the map component (client-side only)
-const IntelMap = dynamic(
-  () => import('@/components/intel-map/IntelMap').then((mod) => mod.IntelMap),
-  {
-    ssr: false,
-    loading: () => <MapLoading />,
-  }
-);
+const IntelMap = dynamic(() => import('@/components/intel-map/IntelMap'), {
+  ssr: false,
+  loading: () => <MapLoading />,
+});
 
 function MapLoading() {
   return (
